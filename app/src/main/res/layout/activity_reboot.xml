@@ -5,18 +5,122 @@
     android:background="#aaaaaa"
     android:orientation="vertical" >
     <LinearLayout
-        android:id="@+id/linearLayoutHID"
+        android:id="@+id/linearLayoutConfig"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         >
         <TextView
-            android:id="@+id/textViewHID"
+            android:id="@+id/textViewTitle"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:background="#000000"
             android:gravity="center_vertical|center_horizontal"
-            android:text="Start Reboot Schedule!"
+            android:text="Shutdwon and Check Devices"
             android:textColor="#FFFFFF" />
-
     </LinearLayout>
+    <LinearLayout
+        android:id="@+id/linearLayoutTestTimesLL"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:background="#57c60e"
+        >
+        <TextView
+            android:id="@+id/textViewTestTimesLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#000000"
+            android:paddingLeft="10dip"
+            android:paddingRight="10dip"
+            android:paddingTop="10dip"
+            android:paddingBottom="10dip"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:gravity="center_vertical|center_horizontal"
+            android:text="Test Times:"
+            android:textColor="#FFFFFF" />
+        <TextView
+            android:id="@+id/textViewTestTimesNum"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="10dip"
+            android:paddingRight="10dip"
+            android:paddingTop="10dip"
+            android:paddingBottom="10dip"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:background="#000000"
+            android:gravity="center_vertical|center_horizontal"
+            android:text=".."
+            android:textColor="#FFFFFF" />
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/linearLayoutSetConfig"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#d7742e"
+        >
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:paddingLeft="10dip"
+        android:paddingRight="10dip"
+        android:paddingTop="10dip"
+        android:paddingBottom="10dip"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="10dp"
+        android:background="#0022ff"
+        android:text="Set Device Test configuration"
+        android:onClick="Set_Device_Test_Config_click"
+        android:id="@+id/btnSetConfig"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:paddingLeft="10dip"
+            android:paddingRight="10dip"
+            android:paddingTop="10dip"
+            android:paddingBottom="10dip"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:background="#247c06"
+            android:text="Start Test"
+            android:onClick="Start_Test_click"
+            android:id="@+id/btnStartTest"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:paddingLeft="10dip"
+        android:paddingRight="10dip"
+        android:paddingTop="10dip"
+        android:paddingBottom="10dip"
+        android:background="#ffffff"
+        >
+        <EditText
+            android:id="@+id/EditTextFECConfig"
+            android:inputType="textMultiLine"
+            android:lines="50"
+            android:text="
+            sdafdsfsasdfffffffffffffffffffff
+            asdffffffffffffffffffffffff
+            asdfffffffffffffffffffffffffffff
+            adsffffffffffffffffffffffff"
+            android:textColor="#0e0e0e"
+            android:layout_height="wrap_content"
+            android:layout_width="fill_parent"
+            android:gravity="left"
+            android:scrollbars="vertical"/>
+    </LinearLayout>
+
 </LinearLayout>
