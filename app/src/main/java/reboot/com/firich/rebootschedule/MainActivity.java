@@ -34,6 +34,7 @@ public class MainActivity extends Activity {
     String mLogFileName="";
     String g_configFileName="fec_device_test_config.xml";
     String g_configFolder = "/storage/emulated/legacy";
+    boolean g_USBTestResult = false;
 
     //////////////////////USB Test  //////////////////////////////////////////////////////////
     /* "USB1;/mnt/media_rw/udisk|USB2;/mnt/media_rw/udisk_2|USB3;/mnt/media_rw/udisk_3|USB4;/mnt/media_rw/udisk_4|USB5;/mnt/media_rw/udisk_5|USB6;/mnt/media_rw/udisk_6|USB7;/mnt/media_rw/udisk_7|USB8;/mnt/media_rw/udisk_8"  */
@@ -46,7 +47,7 @@ public class MainActivity extends Activity {
 
     textViewResultUtil ltextViewResultIDs; //1, 2, 3, 4
     int deviceCount = 0;
-    private Handler mHandler = null; //Brian
+    private Handler g_UITestResultHandler = null; //Brian
     private class textViewResultUtil{
         int[] textViewResultID= new int[20];
         public void setTextViewResultIDs(int deviceCount){
@@ -205,10 +206,16 @@ public class MainActivity extends Activity {
     }
     public void Start_Test_click(View view)
     {
-
-        Intent RebootIntent = new Intent(this, BackgroundService.class);
-        startService(RebootIntent);
         dump_trace("MainActivity:onCreate:startService:Start_Test_click");
+
+        boolean testShutdown = false;
+        if (testShutdown) {
+            Intent RebootIntent = new Intent(this, BackgroundService.class);
+            startService(RebootIntent);
+        }
+
+        startUSBStorage_Test();
+
 
     }
 
@@ -389,5 +396,96 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
         // deviceCount = 8; //usbdisk ~ usbdisk8
         CreateUSBStorageDeviceTable(strUSBStorageDeviceList, deviceCount);
     }
+
+
+    public void startUSBStorage_Test()
+    {
+        dump_trace("startUSBStorage_Test:Begin");
+        this.g_UITestResultHandler = new Handler(); //Brian:
+        USBStorageTestThread USBStorageTestThreadP = new USBStorageTestThread(strUSBStorageDeviceList, ltextViewResultIDs, deviceCount);
+        USBStorageTestThreadP.start();
+    }
+
+    private class USBStorageTestThread extends Thread {
+        String[] lstrUSBPath;
+        textViewResultUtil ltextViewResultIDs;
+        int ldeviceCount;
+        USBStorageTestThread(String[] strUSBPath, textViewResultUtil textViewResultIDs, int deviceCount) {
+            lstrUSBPath = strUSBPath;
+            ltextViewResultIDs = textViewResultIDs;
+            ldeviceCount = deviceCount;
+        }
+
+        public void run() {
+            Intent intent = getIntent();
+            boolean testPASS = false;
+            boolean[] testResult = new boolean[ldeviceCount];
+            for (int i=1; i<= ldeviceCount; i++) {
+                testResult[i-1] = USBStorage_Test(lstrUSBPath,ltextViewResultIDs.getTextViewResultID(i-1), i, ldeviceCount);
+            }
+
+            int i=0;
+            testPASS = testResult[i];
+            do {
+                testPASS = (testPASS && testResult[i]);
+                dump_trace("USB test result:"+testPASS);
+                i++;
+            } while(i< ldeviceCount);
+            g_USBTestResult = testPASS;
+            dump_trace("USB Test total result:g_USBTestResult="+ g_USBTestResult);
+/*
+            if (testPASS){
+                setResult(1, intent);
+            }else{
+                setResult(0, intent);
+            }
+            */
+            try {
+                Thread.sleep(1200);
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            //finish();
+        }
+    }
+
+    private boolean USBStorage_Test(String[] strUSBPaths, int testDeviceTextViewID, int USBIndex, int deviceCount) {
+
+        boolean testResult=false;
+        int intDataReceivedLength=1;
+        //TODO:
+
+        CheckUSBStorageUtil CheckUSBStorageUtilVar = new CheckUSBStorageUtil(strUSBPaths, deviceCount);
+        testResult = CheckUSBStorageUtilVar.checkUSBStorage(USBIndex);
+        PostUIUpdateLog("", testResult, testDeviceTextViewID);
+        try {
+            Thread.sleep(600);
+        } catch (InterruptedException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return testResult;
+
+    }
+
+    private void PostUIUpdateLog(final String msg, final  boolean testPASS, final int testDeviceTextViewID)
+    {
+        this.g_UITestResultHandler.post(new Runnable()
+        {
+            public void run()
+            {
+                //Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+                final TextView textViewResultDeviceID = (TextView) findViewById(testDeviceTextViewID);
+                dump_trace("PostUIUpdateLog:testPASS="+testPASS);
+                if (testPASS)
+                    textViewResultDeviceID.setText("PASS");
+                else
+                    textViewResultDeviceID.setText("FAIL");
+
+            }
+        });
+    }
+
     //////////////////////////////////////////  USB Test ///////////////////////////////////
 }

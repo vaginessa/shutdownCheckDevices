@@ -29,7 +29,7 @@
             android:id="@+id/textViewTestTimesLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="#000000"
+            android:background="#98e7e2"
             android:paddingLeft="10dip"
             android:paddingRight="10dip"
             android:paddingTop="10dip"
@@ -40,7 +40,7 @@
             android:layout_marginRight="10dp"
             android:gravity="center_vertical|center_horizontal"
             android:text="Test Times:"
-            android:textColor="#FFFFFF" />
+            android:textColor="#000000" />
         <TextView
             android:id="@+id/textViewTestTimesNum"
             android:layout_width="wrap_content"
@@ -53,10 +53,10 @@
             android:layout_marginBottom="10dp"
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp"
-            android:background="#000000"
+            android:background="#98e7e2"
             android:gravity="center_vertical|center_horizontal"
             android:text=".."
-            android:textColor="#FFFFFF" />
+            android:textColor="#000000" />
     </LinearLayout>
 
     <LinearLayout
@@ -137,7 +137,7 @@
         android:layout_marginBottom="10dp"
         android:layout_marginLeft="10dp"
         android:layout_marginRight="10dp"
-        android:background="#0022ff"
+        android:background="#8cc0e2"
         android:text="Set Device Test configuration"
         android:onClick="Set_Device_Test_Config_click"
         android:id="@+id/btnSetConfig"/>
@@ -153,7 +153,7 @@
             android:layout_marginBottom="10dp"
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp"
-            android:background="#247c06"
+            android:background="#b4ed8e"
             android:text="Start Test"
             android:onClick="Start_Test_click"
             android:id="@+id/btnStartTest"/>
