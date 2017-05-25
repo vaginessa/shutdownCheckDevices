@@ -1,7 +1,9 @@
 package reboot.com.firich.rebootschedule;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.os.Build;
@@ -20,10 +22,12 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -48,6 +52,8 @@ public class MainActivity extends Activity {
     textViewResultUtil ltextViewResultIDs; //1, 2, 3, 4
     int deviceCount = 0;
     private Handler g_UITestResultHandler = null; //Brian
+    private Handler g_UITestTimesHandler = null; //Brian
+
     private class textViewResultUtil{
         int[] textViewResultID= new int[20];
         public void setTextViewResultIDs(int deviceCount){
@@ -97,6 +103,9 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_reboot);
+
+        this.g_UITestResultHandler = new Handler(); //Brian:
+        this.g_UITestTimesHandler = new Handler();
 
         mLogFileName = get_log_file_name();
         dump_trace("MainActivity:onCreate:1");
@@ -209,12 +218,14 @@ public class MainActivity extends Activity {
         dump_trace("MainActivity:onCreate:startService:Start_Test_click");
 
         boolean testShutdown = false;
+        set_TestTimes(0);
         if (testShutdown) {
             Intent RebootIntent = new Intent(this, BackgroundService.class);
             startService(RebootIntent);
         }
 
         startUSBStorage_Test();
+        //writeTestTimesToFile(this.getApplicationContext(), intTestTimes);
 
 
     }
@@ -401,7 +412,7 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
     public void startUSBStorage_Test()
     {
         dump_trace("startUSBStorage_Test:Begin");
-        this.g_UITestResultHandler = new Handler(); //Brian:
+
         USBStorageTestThread USBStorageTestThreadP = new USBStorageTestThread(strUSBStorageDeviceList, ltextViewResultIDs, deviceCount);
         USBStorageTestThreadP.start();
     }
@@ -433,6 +444,13 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
             } while(i< ldeviceCount);
             g_USBTestResult = testPASS;
             dump_trace("USB Test total result:g_USBTestResult="+ g_USBTestResult);
+            write_Log_to_storage("USB Test total result="+ g_USBTestResult);
+            int TestTimes=0;
+            TestTimes = get_TestTimes();
+            TestTimes++;
+            set_TestTimes(TestTimes);
+            UIUpdateTestTimes(TestTimes);
+            dump_trace("Test Times:="+TestTimes );
 /*
             if (testPASS){
                 setResult(1, intent);
@@ -448,6 +466,82 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
             }
             //finish();
         }
+    }
+
+    private void set_TestTimes(int nTestTimes)
+    {
+        SharedPreferences spref = getPreferences(MODE_PRIVATE);
+
+        //由 SharedPreferences 中取出 Editor 物件，透過 Editor 物件將資料存入
+        SharedPreferences.Editor editor = spref.edit();
+        //清除 SharedPreferences 檔案中所有資料
+        editor.clear();
+        //儲存 boolean 型態的資料
+        editor.putInt("KEY_TEST_TIMES", nTestTimes);
+        //TODO: 可以將 log 檔名存起來.... ---------------
+        //將目前對 SharedPreferences 的異動寫入檔案中
+        //如果沒有呼叫 commit()，則異動的資料不會生效
+        editor.commit();
+    }
+    private int get_TestTimes()
+    {
+        SharedPreferences spref = getPreferences(MODE_PRIVATE);
+        //回傳 KEY_STRING 是否在在 SharedPreferences 檔案中
+        boolean exists = spref.contains("KEY_TEST_TIMES");
+        if (exists){
+            //透過 KEY_BOOL key 取出 boolean 型態的資料，若資料不存在則回傳 true
+            int nTestTimes = spref.getInt("KEY_TEST_TIMES", 0);
+            return nTestTimes;
+        }else{
+            return 0;
+        }
+    }
+
+    String g_TestTimesfilename = "Test-times";
+    static private  int intTestTimes=0;
+    void writeTestTimesToFile(Context context, String data)
+    {
+        //      String string = "Hello world!";
+        FileOutputStream outputStream;
+
+        try {
+            outputStream = context.openFileOutput(g_TestTimesfilename, Context.MODE_PRIVATE);
+            outputStream.write(data.getBytes());
+            outputStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private String readTestTimesFromFile() {
+
+        String ret = "";
+
+        try {
+            InputStream inputStream = openFileInput(g_TestTimesfilename);
+
+            if ( inputStream != null ) {
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                String receiveString = "";
+                StringBuilder stringBuilder = new StringBuilder();
+
+                while ( (receiveString = bufferedReader.readLine()) != null ) {
+                    stringBuilder.append(receiveString);
+                }
+
+                inputStream.close();
+                ret = stringBuilder.toString();
+            }
+        }
+        catch (FileNotFoundException e) {
+            Log.e("login activity", "File not found: " + e.toString());
+        } catch (IOException e) {
+            Log.e("login activity", "Can not read file: " + e.toString());
+        }
+
+        return ret;
     }
 
     private boolean USBStorage_Test(String[] strUSBPaths, int testDeviceTextViewID, int USBIndex, int deviceCount) {
@@ -487,5 +581,24 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
         });
     }
 
+    private void UIUpdateTestTimes(final  int testTimes)
+    {
+
+        this.g_UITestTimesHandler.post(new Runnable()
+        {
+            public void run()
+            {
+                String result="";
+                int nTestTimes=0;
+                nTestTimes =testTimes;
+                //Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+                TextView textViewResultDeviceID = (TextView) findViewById(R.id.textViewTestTimesNum);
+                dump_trace("UIUpdateTestTimes:testTimes="+nTestTimes);
+                result = "" + nTestTimes;
+                textViewResultDeviceID.setText(result);
+
+            }
+        });
+    }
     //////////////////////////////////////////  USB Test ///////////////////////////////////
 }
