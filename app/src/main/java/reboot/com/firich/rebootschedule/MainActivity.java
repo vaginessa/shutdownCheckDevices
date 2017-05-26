@@ -107,7 +107,7 @@ public class MainActivity extends Activity {
         this.g_UITestResultHandler = new Handler(); //Brian:
         this.g_UITestTimesHandler = new Handler();
 
-        mLogFileName = get_log_file_name();
+        //mLogFileName = get_log_file_name();
         dump_trace("MainActivity:onCreate:1");
         LoadSetConfigFile();
 
@@ -121,6 +121,25 @@ public class MainActivity extends Activity {
         startService(RebootIntent);
         dump_trace("MainActivity:onCreate:startService:RebootIntent");
         */
+    }
+
+    boolean  g_bFromBootCompleted = false;
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        dump_trace("onStart:start");
+        setTitle(" SN:" + Build.SERIAL);
+
+        Intent intent = getIntent();
+        g_bFromBootCompleted = intent.getBooleanExtra("FromBootCompleted", false);
+        dump_trace("onStart:bFromBootCompleted"+ g_bFromBootCompleted);
+        if (g_bFromBootCompleted)
+        {
+            //start 3min delay to test
+            startUSBStorage_Test();
+        }
+
     }
 
     /*
@@ -217,12 +236,14 @@ public class MainActivity extends Activity {
     {
         dump_trace("MainActivity:onCreate:startService:Start_Test_click");
 
-        boolean testShutdown = false;
-        set_TestTimes(0);
+        //boolean testShutdown = false;
+        Write_TestTimes_to_InternalStorage(0);
+        /*
         if (testShutdown) {
             Intent RebootIntent = new Intent(this, BackgroundService.class);
             startService(RebootIntent);
         }
+        */
 
         startUSBStorage_Test();
         //writeTestTimesToFile(this.getApplicationContext(), intTestTimes);
@@ -428,6 +449,22 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
         }
 
         public void run() {
+
+            int TestTimes=0;
+            TestTimes = get_TestTimes();
+            UIUpdateTestTimes(TestTimes);
+            try {
+                //if (g_bFromBootCompleted) {
+                 Thread.sleep(1 * 60 * 1000); // delay 3 min test.
+
+
+                //Thread.sleep(3*60); // delay 3 min test.
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+
             Intent intent = getIntent();
             boolean testPASS = false;
             boolean[] testResult = new boolean[ldeviceCount];
@@ -445,12 +482,32 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
             g_USBTestResult = testPASS;
             dump_trace("USB Test total result:g_USBTestResult="+ g_USBTestResult);
             write_Log_to_storage("USB Test total result="+ g_USBTestResult);
-            int TestTimes=0;
-            TestTimes = get_TestTimes();
-            TestTimes++;
-            set_TestTimes(TestTimes);
-            UIUpdateTestTimes(TestTimes);
-            dump_trace("Test Times:="+TestTimes );
+
+            /*
+             if test PASS,
+                write test times to storage
+                shutdown
+             else
+                test FAIL stop ....test ....停在錯誤的畫面不要 shutdown.
+             */
+            //*** For Test shutdown
+            //g_USBTestResult = true;
+            //*** For Test shutdown
+
+            //Write test result into global variable.
+            if (g_USBTestResult) {
+                dump_trace("Test Result:PASS");
+                TestTimes = get_TestTimes();
+                TestTimes++;
+                Write_TestTimes_to_InternalStorage(TestTimes);
+                UIUpdateTestTimes(TestTimes);
+                dump_trace("Test Times:=" + TestTimes);
+                //TODO: shutdown...
+                shutdown_now();
+            }else{
+                dump_trace("Test Result:FAIL");
+                // test FAIL, stop ....test ....停在錯誤的畫面不要 shutdown.
+            }
 /*
             if (testPASS){
                 setResult(1, intent);
@@ -458,17 +515,21 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
                 setResult(0, intent);
             }
             */
-            try {
-                Thread.sleep(1200);
-            } catch (InterruptedException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+
             //finish();
         }
     }
 
-    private void set_TestTimes(int nTestTimes)
+    private void shutdown_now()
+    {
+        dump_trace("shutdown_now:start");
+        Intent i = new Intent("android.intent.action.ACTION_REQUEST_SHUTDOWN");
+        i.putExtra("android.intent.extra.KEY_CONFIRM",false);
+        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        MainActivity.this.startActivity(i);
+    }
+
+    private void Write_TestTimes_to_InternalStorage(int nTestTimes)
     {
         SharedPreferences spref = getPreferences(MODE_PRIVATE);
 

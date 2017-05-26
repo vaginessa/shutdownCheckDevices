@@ -60,6 +60,7 @@ public class BackgroundService extends IntentService {
         //
 
         dump_trace("Start="+getCurrentDate());
+        //call MainActivity to show test devices screen.
         while (System.currentTimeMillis() < endTime) {
             synchronized (this) {
                 try {
@@ -73,6 +74,8 @@ public class BackgroundService extends IntentService {
             }
         }
     }
+
+
 
     public void RebootNow() {
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
