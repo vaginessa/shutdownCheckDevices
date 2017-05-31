@@ -1,19 +1,16 @@
 <DeviceTest>
     <Device name="USBStorage"
-        test="true"
         numOfUSB="4"
         Android5_USBList="/storage/usbdisk|/storage/usbdisk2|/storage/usbdisk3|/storage/usbdisk4|/storage/usbdisk5|/storage/usbdisk6|/storage/usbdisk7|/storage/usbdisk8"
     ></Device>
 
     <Device
         name="RS232Test"
-        test="true"
         devicename="/dev/ttyUSB100|/dev/ttyUSB101|/dev/ttyUSB102"
     ></Device>
 
     <Device
         name="Ethernet"
-        test="true"
         dev="192.168.8.252"
     ></Device>
 </DeviceTest>
