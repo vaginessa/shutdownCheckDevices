@@ -118,7 +118,65 @@
 
         </TableLayout>
     </LinearLayout>
+<!-- RS232     //////////////////////////////                    -->
+    <LinearLayout
+        android:id="@+id/linearLayoutRS232Title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        >
+        <TextView
+            android:id="@+id/status_RS232_text"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:background="#000000"
+            android:gravity="center_vertical|center_horizontal"
+            android:text="RS232 Test"
+            android:textColor="#FFFFFF" />
 
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/linearLayoutRS232Table"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        >
+        <TableLayout
+            android:id="@+id/Title_RS232"
+            android:layout_width="fill_parent"
+            android:background="#06c412"
+            android:layout_margin="1dip"
+            android:layout_height="wrap_content" >
+
+            <TableRow
+                android:background="#053d3d"
+                android:layout_margin="1dip">
+                <TextView
+                    android:layout_height="wrap_content"
+                    android:layout_weight="5"
+                    android:background="#000000"
+                    android:textColor="#FFFFFF"
+                    android:padding="2.5dp"
+                    android:textSize="16sp"
+                    android:text="RS232 Device" />
+                <TextView
+                    android:layout_height="wrap_content"
+                    android:layout_weight="5"
+                    android:background="#000000"
+                    android:textColor="#FFFFFF"
+                    android:padding="2.5dp"
+                    android:textSize="16sp"
+                    android:text="RS232 Loopback Result" />
+
+            </TableRow>
+
+            <TableLayout
+                android:id="@+id/device_list_table_RS232"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+        </TableLayout>
+    </LinearLayout>
+    <!-- RS232     //////////////////////////////                    -->
     <LinearLayout
         android:id="@+id/linearLayoutSetConfig"
         android:layout_width="match_parent"
