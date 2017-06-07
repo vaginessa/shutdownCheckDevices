@@ -97,7 +97,7 @@
                     android:background="#000000"
                     android:textColor="#FFFFFF"
                     android:padding="2.5dp"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:text="USB Disk Number" />
                 <TextView
                     android:layout_height="wrap_content"
@@ -105,7 +105,7 @@
                     android:background="#000000"
                     android:textColor="#FFFFFF"
                     android:padding="2.5dp"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:text="USB test Result" />
 
             </TableRow>
@@ -156,7 +156,7 @@
                     android:background="#000000"
                     android:textColor="#FFFFFF"
                     android:padding="2.5dp"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:text="RS232 Device" />
                 <TextView
                     android:layout_height="wrap_content"
@@ -164,7 +164,7 @@
                     android:background="#000000"
                     android:textColor="#FFFFFF"
                     android:padding="2.5dp"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:text="RS232 Loopback Result" />
 
             </TableRow>

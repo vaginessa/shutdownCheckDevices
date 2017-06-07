@@ -29,8 +29,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import firich.com.firichsdk.SerialPort;
 
 public class MainActivity extends Activity {
 
@@ -39,7 +42,78 @@ public class MainActivity extends Activity {
     String g_configFileName="fec_device_test_config.xml";
     String g_configFolder = "/storage/emulated/legacy";
     boolean g_USBTestResult = false;
+    boolean g_RS232TestResult = false; //
 
+    ////////////////////// Begin: Migrate RS232 Test  migratge //////////////////////////////////////////////////////////
+
+    private String strRS232DeviceName ="";
+
+    String[] strRS232DeviceList; // /dev/ttyUSB0|/dev/ttyUSB1|/dev/ttyUSB2|/dev/ttyUSB3
+    textViewResultUtil_RS232 g_ltextViewResultIDs_RS232; //1, 2, 3, 4
+    int g_RS232_deviceCount = 0;
+
+    private String strTestString="testStringtestString";
+    private Handler g_Handler_RS232 = null; //Brian
+    ////////////////////////////////////////////////////////////////////////////////
+    SerialPort sp;
+    int intSerialPortHandle = -1;
+    private int intBaudRate=9600;
+
+    public SerialPort.SerialPortListener splistener = new SerialPort.SerialPortListener() {
+        public void onDataReceive(byte[] btyData){
+            Log.d("onDataReceive",new String(btyData));
+        }
+    };
+
+    private void SleepMiniSecond(SerialPort spThread, int minSecond)
+    {
+        try {
+            spThread.sleep(minSecond);
+            dump_trace("SLEEP_MSEC="+ minSecond);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private class textViewResultUtil_RS232{
+        int[] textViewResultID= new int[20];
+        public void setTextViewResultIDs(int deviceCount){
+
+            //textViewResultID =  new int[deviceCount];
+            for (int i=0; i < deviceCount; i++){
+                textViewResultID[i] = generateViewId();
+                dump_trace("textViewResultUtil_RS232:setTextViewResultIDs: textViewResultID="+ textViewResultID[i]);
+            }
+        }
+        public int getTextViewResultID(int ResultIndex){
+            int ResultID=-1;
+            if (ResultIndex < 20)
+                ResultID = textViewResultID[ResultIndex];
+            return ResultID;
+        }
+        private final AtomicInteger sNextGeneratedId = new AtomicInteger(11); //for RS232
+
+        /**
+         * Generate a value suitable for use in @link setId(int)}.
+         * This value will not collide with ID values generated at build time by aapt for R.id.
+         *
+         * @return a generated ID value
+         */
+        public int generateViewId() {
+            for (;;) {
+                final int result = sNextGeneratedId.get();
+                // aapt-generated IDs have the high byte nonzero; clamp to the range under that.
+                int newValue = result + 1; //for RS232
+                if (newValue > 0x00FFFFFF) newValue = 1; // Roll over to 1, not 0.
+                if (sNextGeneratedId.compareAndSet(result, newValue)) {
+                    return result;
+                }
+            }
+        }
+
+    }
+
+    ////////////////////// End: Migrate RS232 Test  migratge //////////////////////////////////////////////////////////
     //////////////////////USB Test  //////////////////////////////////////////////////////////
     /* "USB1;/mnt/media_rw/udisk|USB2;/mnt/media_rw/udisk_2|USB3;/mnt/media_rw/udisk_3|USB4;/mnt/media_rw/udisk_4|USB5;/mnt/media_rw/udisk_5|USB6;/mnt/media_rw/udisk_6|USB7;/mnt/media_rw/udisk_7|USB8;/mnt/media_rw/udisk_8"  */
     private String strUSBStorageDeviceName_android4_4 ="/storage/udisk|/storage/udisk_2|/storage/udisk_3|/storage/udisk_4|/storage/udisk_5|/storage/udisk_6|/storage/udisk_7|/storage/udisk_8";
@@ -61,6 +135,7 @@ public class MainActivity extends Activity {
             //textViewResultID =  new int[deviceCount];
             for (int i=0; i < deviceCount; i++){
                 textViewResultID[i] = generateViewId();
+                dump_trace("setTextViewResultIDs: textViewResultID="+ textViewResultID[i]);
             }
         }
         public int getTextViewResultID(int ResultIndex){
@@ -88,6 +163,7 @@ public class MainActivity extends Activity {
                 }
             }
         }
+
     }
     //////////////////////// USB Test ////////////////////////////////////////////////////////
 
@@ -107,12 +183,15 @@ public class MainActivity extends Activity {
         this.g_UITestResultHandler = new Handler(); //Brian:
         this.g_UITestTimesHandler = new Handler();
 
+        ////////////////////// Migrate RS232 Test  migratge //////////////////////////////////////////////////////////
+        this.g_Handler_RS232 = new Handler(); //Brian:
+
         //mLogFileName = get_log_file_name();
         dump_trace("MainActivity:onCreate:1");
         LoadSetConfigFile();
 
         InitUSBStorageTable(); // Create USB test layout table.
-
+        InitRS232TestTable();   // Create RS232 test layout table
 
 
 
@@ -231,6 +310,7 @@ public class MainActivity extends Activity {
         EditText editTextFECConfig=(EditText)findViewById(R.id.EditTextFECConfig);
         write_config_xml_to_storage(editTextFECConfig.getText().toString());
         InitUSBStorageTable();
+        InitRS232TestTable();   // Create RS232 test layout table
     }
     public void Start_Test_click(View view)
     {
@@ -246,6 +326,7 @@ public class MainActivity extends Activity {
         */
 
         startUSBStorage_Test();
+
         //writeTestTimesToFile(this.getApplicationContext(), intTestTimes);
 
 
@@ -481,7 +562,7 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
             } while(i< ldeviceCount);
             g_USBTestResult = testPASS;
             dump_trace("USB Test total result:g_USBTestResult="+ g_USBTestResult);
-            write_Log_to_storage("USB Test total result="+ g_USBTestResult);
+            //write_Log_to_storage("USB Test total result="+ g_USBTestResult);
 
             /*
              if test PASS,
@@ -496,6 +577,7 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
 
             //Write test result into global variable.
             if (g_USBTestResult) {
+                /*
                 dump_trace("Test Result:PASS");
                 TestTimes = get_TestTimes();
                 TestTimes++;
@@ -504,10 +586,14 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
                 dump_trace("Test Times:=" + TestTimes);
                 //TODO: shutdown...
                 shutdown_now();
+                */
             }else{
-                dump_trace("Test Result:FAIL");
+                dump_trace("Test Result USB:FAIL");
                 // test FAIL, stop ....test ....停在錯誤的畫面不要 shutdown.
             }
+
+            startRS232_Loopback_Test();
+
 /*
             if (testPASS){
                 setResult(1, intent);
@@ -662,4 +748,212 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
         });
     }
     //////////////////////////////////////////  USB Test ///////////////////////////////////
+
+    ////////////////////// Begin: Migrate RS232 Test  migratge //////////////////////////////////////////////////////////
+    private void CreateRS232DeviceTable(String[] strRS232DeviceList, int deviceCount)
+    {
+        Resources resource = (Resources) getBaseContext().getResources();
+        ColorStateList colorWhile = (ColorStateList) resource.getColorStateList(R.color.white);
+        ColorStateList colorBlack = (ColorStateList) resource.getColorStateList(R.color.black);
+        TableLayout device_list_table_RS232 = (TableLayout) findViewById(R.id.device_list_table_RS232);
+        //device_list_table_RS232.setStretchAllColumns(true);
+        TableLayout.LayoutParams row_layout = new TableLayout.LayoutParams(TableLayout.LayoutParams.MATCH_PARENT, TableLayout.LayoutParams.WRAP_CONTENT);
+        TableRow.LayoutParams view_layout_device = new TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.WRAP_CONTENT, 5);
+        TableRow.LayoutParams view_layout_result = new TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.WRAP_CONTENT, 5);
+
+
+        g_ltextViewResultIDs_RS232 = new textViewResultUtil_RS232();
+        g_ltextViewResultIDs_RS232.setTextViewResultIDs(deviceCount);
+
+        Remove_USB_Table_Device_List(device_list_table_RS232); //Remove all rows first.
+
+        for (int i=0; i< deviceCount; i++) {
+            TableRow tr = new TableRow(MainActivity.this);
+            tr.setLayoutParams(row_layout);
+            tr.setBackgroundColor(resource.getColor(R.color.green));
+            tr.setGravity(Gravity.CENTER_HORIZONTAL);
+
+            String strRS232Device = strRS232DeviceList[i];
+            if ((strRS232Device == null) || (strRS232Device.length() == 0))
+                break;
+            TextView device = new TextView(MainActivity.this);
+            device.setText(strRS232Device);
+            device.setTextColor(colorBlack);
+            device.setBackgroundResource(R.color.white);
+            device.setPadding(2, 2, 2, 2);
+            device.setTextSize(16);
+            view_layout_device.setMargins(2, 2, 2, 2);
+            device.setLayoutParams(view_layout_device);
+
+            TextView lookback_result = new TextView(MainActivity.this);
+            lookback_result.setId(g_ltextViewResultIDs_RS232.getTextViewResultID(i));
+            lookback_result.setText("??");
+            lookback_result.setTextColor((ColorStateList) resource.getColorStateList(R.color.red));
+            lookback_result.setBackgroundResource(R.color.white);
+            lookback_result.setPadding(2, 2, 2, 2);
+            lookback_result.setTextSize(16);
+            view_layout_result.setMargins(2, 2, 2, 2);
+            lookback_result.setLayoutParams(view_layout_result);
+
+            tr.addView(device);
+            tr.addView(lookback_result);
+            device_list_table_RS232.addView(tr);
+        }
+
+    }
+////////////////////// End: Migrate RS232 Test  migratge //////////////////////////////////////////////////////////
+////////////////////// Begin: Migrate RS232 Test  migratge //////////////////////////////////////////////////////////
+public void InitRS232TestTable()
+{
+
+
+
+    configUtil.Device devObject;
+    configUtil configFile = new configUtil();
+
+    configFile.dom4jXMLParser();
+    //strSmartCardttyUSBPath
+    devObject = configFile.getDevice("RS232Test");
+    if (devObject.RS232DeviceName != null && !devObject.RS232DeviceName.isEmpty()) {
+        strRS232DeviceName = devObject.RS232DeviceName;
+    }
+
+    int numberOfSeparator =0;
+    for( int i=0; i<strRS232DeviceName.length(); i++ ) {
+        if( strRS232DeviceName.charAt(i) == '|' ) {
+            numberOfSeparator++;
+        }
+    }
+    g_RS232_deviceCount = numberOfSeparator+1;
+    strRS232DeviceList = strRS232DeviceName.split("\\|");
+    if ((strRS232DeviceList == null) || (strRS232DeviceList.length == 0)) {
+        return ;
+    }
+    CreateRS232DeviceTable(strRS232DeviceList, g_RS232_deviceCount);
+}
+////////////////////// End: Migrate RS232 Test  migratge //////////////////////////////////////////////////////////
+
+    ////////////////////// Begin: Migrate RS232 Test  migratge //////////////////////////////////////////////////////////
+    private class DeviceLoopbackTestThread extends Thread {
+        String[] lstrttyUSBPath;
+        textViewResultUtil_RS232 ltextViewResultIDs_RS232;
+        int ldeviceCount;
+        DeviceLoopbackTestThread(String[] strttyUSBPath, textViewResultUtil_RS232 textViewResultIDs, int deviceCount) {
+            lstrttyUSBPath = strttyUSBPath;
+            ltextViewResultIDs_RS232 = textViewResultIDs;
+            ldeviceCount = deviceCount;
+        }
+
+        public void run() {
+            Intent intent = getIntent();
+            boolean testPASS = false;
+            for (int i=0; i< ldeviceCount; i++) {
+                testPASS = RS232_Test(lstrttyUSBPath[i], ltextViewResultIDs_RS232.getTextViewResultID(i));
+            }
+            g_RS232TestResult = testPASS;
+
+            if (g_USBTestResult && g_RS232TestResult) {
+                dump_trace("Test Result, g_USBTestResult,g_RS232TestResult :PASS");
+                int TestTimes=0;
+                TestTimes = get_TestTimes();
+                TestTimes++;
+                Write_TestTimes_to_InternalStorage(TestTimes);
+                UIUpdateTestTimes(TestTimes);
+                dump_trace("Test Times:=" + TestTimes);
+                //TODO: shutdown...
+                //shutdown_now();
+            }else{
+                dump_trace("Test Result :FAIL");
+            }
+            /*
+            if (testPASS){
+                setResult(1, intent);
+            }else{
+                setResult(0, intent);
+            }
+
+            try {
+                Thread.sleep(1200);
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            finish();
+            */
+        }
+    }
+
+    private void PostUIUpdateLog_RS232(final String msg, final  int intDataReceivedLength, final int testDeviceTextViewID)
+    {
+        this.g_Handler_RS232.post(new Runnable()
+        {
+            public void run()
+            {
+                //Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+                final TextView textViewResultDeviceID = (TextView) findViewById(testDeviceTextViewID);
+                dump_trace("PostUIUpdateLog_RS232:intDataReceivedLength="+intDataReceivedLength);
+                if (intDataReceivedLength >0)
+                    textViewResultDeviceID.setText("PASS");
+                else
+                    textViewResultDeviceID.setText("FAIL");
+
+            }
+        });
+    }
+
+    private boolean RS232_Test(String strttyUSBPath, int testDeviceTextViewID) {
+        int intReturnCode = -1;
+        // Open serial port
+        sp = new SerialPort();
+
+        dump_trace("RS232.test.start");
+        dump_trace("strttyUSBPath:"+strttyUSBPath);
+
+        intSerialPortHandle = sp.open(strttyUSBPath,intBaudRate);
+
+        dump_trace("open NFC port: intSerialPortHandle="+intSerialPortHandle);
+
+        byte[] btyVersion_msg_received = new byte[256];
+        Arrays.fill( btyVersion_msg_received, (byte) 0 );
+        int intDataReceivedLength=0;
+        String strTestResult="";
+
+        intReturnCode = sp.write(intSerialPortHandle,strTestString.getBytes());
+        dump_trace("write: intReturnCode="+intReturnCode);
+        sp.setListener(splistener);
+        //SleepMiniSecond(sp, 1000);
+
+        intDataReceivedLength = sp.getDataReceivedLength();
+        int nRetry=0;
+        while (intDataReceivedLength == 0)
+        {
+            SleepMiniSecond(sp, 1000);
+            intDataReceivedLength = sp.getDataReceivedLength();
+            nRetry++;
+            if (nRetry == 2)
+                break;
+        }
+        if ( intDataReceivedLength>= 0) {
+            btyVersion_msg_received = Arrays.copyOf(sp.getBytDataReceived(),intDataReceivedLength);
+        }
+
+        PostUIUpdateLog_RS232("", intDataReceivedLength, testDeviceTextViewID);
+
+
+        sp.close(intSerialPortHandle);
+        sp = null;
+        boolean testResult = false;
+        testResult = (intDataReceivedLength > 0 )? true: false;
+        return testResult;
+
+    }
+
+    public void startRS232_Loopback_Test()
+    {
+        dump_trace("startRS232_Loopback_Test: start");
+        DeviceLoopbackTestThread DeviceLoopbackTestThreadP = new DeviceLoopbackTestThread(strRS232DeviceList, g_ltextViewResultIDs_RS232, g_RS232_deviceCount);
+        DeviceLoopbackTestThreadP.start();
+    }
+
+////////////////////// End: Migrate RS232 Test  migratge //////////////////////////////////////////////////////////
 }
