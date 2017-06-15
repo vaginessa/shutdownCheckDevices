@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -43,6 +44,17 @@ public class MainActivity extends Activity {
     String g_configFolder = "/storage/emulated/legacy";
     boolean g_USBTestResult = false;
     boolean g_RS232TestResult = false; //
+    boolean g_PingTestResult = false;
+
+    // Test USB or Not..
+    boolean g_TestUSB = false;
+    boolean g_TestRS232 = false;
+    boolean g_TestEthernet = false;
+
+    //////////////////////Begin: Migrate Ethernet Test   //////////////////////////////////////////////////////////
+    private Handler g_Handler_Ethernet = null; //Brian
+    private String devIPaddress="124.108.105.150";
+    //////////////////////End: Migrate Ethernet Test   //////////////////////////////////////////////////////////
 
     ////////////////////// Begin: Migrate RS232 Test  migratge //////////////////////////////////////////////////////////
 
@@ -183,6 +195,9 @@ public class MainActivity extends Activity {
         this.g_UITestResultHandler = new Handler(); //Brian:
         this.g_UITestTimesHandler = new Handler();
 
+        ////////////////////// Migrate Ethernet Test   //////////////////////////////////////////////////////////
+        this.g_Handler_Ethernet = new Handler(); //Brian:
+
         ////////////////////// Migrate RS232 Test  migratge //////////////////////////////////////////////////////////
         this.g_Handler_RS232 = new Handler(); //Brian:
 
@@ -192,6 +207,7 @@ public class MainActivity extends Activity {
 
         InitUSBStorageTable(); // Create USB test layout table.
         InitRS232TestTable();   // Create RS232 test layout table
+        InitEthernetTestTable();
 
 
 
@@ -546,23 +562,28 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
             }
 
 
-            Intent intent = getIntent();
+            //Intent intent = getIntent();
             boolean testPASS = false;
             boolean[] testResult = new boolean[ldeviceCount];
-            for (int i=1; i<= ldeviceCount; i++) {
-                testResult[i-1] = USBStorage_Test(lstrUSBPath,ltextViewResultIDs.getTextViewResultID(i-1), i, ldeviceCount);
-            }
 
-            int i=0;
-            testPASS = testResult[i];
-            do {
-                testPASS = (testPASS && testResult[i]);
-                dump_trace("USB test result:"+testPASS);
-                i++;
-            } while(i< ldeviceCount);
-            g_USBTestResult = testPASS;
-            dump_trace("USB Test total result:g_USBTestResult="+ g_USBTestResult);
-            //write_Log_to_storage("USB Test total result="+ g_USBTestResult);
+            if (g_TestUSB) {
+                for (int i = 1; i <= ldeviceCount; i++) {
+                    testResult[i - 1] = USBStorage_Test(lstrUSBPath, ltextViewResultIDs.getTextViewResultID(i - 1), i, ldeviceCount);
+                }
+
+                int i = 0;
+                testPASS = testResult[i];
+                do {
+                    testPASS = (testPASS && testResult[i]);
+                    dump_trace("USB test result:" + testPASS);
+                    i++;
+                } while (i < ldeviceCount);
+                g_USBTestResult = testPASS;
+                dump_trace("USB Test total result:g_USBTestResult=" + g_USBTestResult);
+                //write_Log_to_storage("USB Test total result="+ g_USBTestResult);
+            }else{
+                dump_trace("Do not test USB!");
+            }
 
             /*
              if test PASS,
@@ -847,24 +868,24 @@ public void InitRS232TestTable()
         public void run() {
             Intent intent = getIntent();
             boolean testPASS = false;
+            /*
             for (int i=0; i< ldeviceCount; i++) {
                 testPASS = RS232_Test(lstrttyUSBPath[i], ltextViewResultIDs_RS232.getTextViewResultID(i));
             }
+            */
+
+            int i=0;
+            testPASS = RS232_Test(lstrttyUSBPath[i], ltextViewResultIDs_RS232.getTextViewResultID(i));
+            do {
+                testPASS = (testPASS && RS232_Test(lstrttyUSBPath[i], ltextViewResultIDs_RS232.getTextViewResultID(i)));
+                dump_trace("USB test result:i="+ i + "="+testPASS);
+                i++;
+            } while(i< ldeviceCount);
+
             g_RS232TestResult = testPASS;
 
-            if (g_USBTestResult && g_RS232TestResult) {
-                dump_trace("Test Result, g_USBTestResult,g_RS232TestResult :PASS");
-                int TestTimes=0;
-                TestTimes = get_TestTimes();
-                TestTimes++;
-                Write_TestTimes_to_InternalStorage(TestTimes);
-                UIUpdateTestTimes(TestTimes);
-                dump_trace("Test Times:=" + TestTimes);
-                //TODO: shutdown...
-                //shutdown_now();
-            }else{
-                dump_trace("Test Result :FAIL");
-            }
+            Test_Ethernet();
+
             /*
             if (testPASS){
                 setResult(1, intent);
@@ -956,4 +977,252 @@ public void InitRS232TestTable()
     }
 
 ////////////////////// End: Migrate RS232 Test  migratge //////////////////////////////////////////////////////////
+
+    //////////////////////Begin: Migrate Ethernet Test   //////////////////////////////////////////////////////////
+    TextView textViewPingPASS;
+    public void InitEthernetTestTable()
+    {
+
+
+
+        configUtil.Device devObject;
+        configUtil configFile = new configUtil();
+
+        configFile.dom4jXMLParser();
+        devObject = configFile.getDevice("Ethernet");
+        if (devObject.Dev != null && !devObject.Dev.isEmpty()) {
+            devIPaddress = devObject.Dev;
+        }
+        TextView editTextDevIPaddress = (TextView)findViewById(R.id.textViewDestIPaddress);
+        editTextDevIPaddress.setText(devIPaddress);
+
+        textViewPingPASS =  (TextView)findViewById(R.id.textViewPingResult);
+        // Test_Ethernet();
+        PostUIUpdateLog_Ethernet(textViewPingPASS,"??");
+    }
+
+
+
+    private void Test_Ethernet()
+    {
+
+        dump_trace("Start Test Ethernet:");
+        PostUIUpdateLog_Ethernet(textViewPingPASS,"Testing...");
+        // PingTestThread PingTestThreadP = new PingTestThread();
+        //.PingTestThreadP.start();
+        PingWithWIFICheckedThread PingWithWIFICheckedThreadP = new PingWithWIFICheckedThread(this);
+        PingWithWIFICheckedThreadP.start();
+    }
+
+    /*
+    private class PingTestThread extends Thread {
+        PingTestThread() {
+        }
+
+        public void run() {
+            // compute primes larger than minPrime
+            boolean pingPASS = false;
+            int retryTimes=0;
+            do {
+                pingPASS = executeCommand();
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                retryTimes++;
+            } while (!pingPASS && (retryTimes <5));
+            String strResult="FAIL!";
+            g_PingTestResult = pingPASS;
+            if (pingPASS){
+                strResult = "PASS";
+            }
+            PostUIUpdateLog_Ethernet(textViewPingPASS,strResult);
+
+
+
+        }
+    }
+    */
+
+    private void PostUIUpdateLog_Ethernet(final TextView textViewMsg, final String PostUIMsg)
+    {
+        this.g_Handler_Ethernet.post(new Runnable()
+        {
+            public void run()
+            {
+                dump_trace("PostUIMsg="+PostUIMsg);
+
+                //textViewPingPASS.setBackgroundResource(R.color.red);
+                //if (testPASS){
+                    //textViewPingPASS.setBackgroundResource(R.color.green);
+                //}
+                textViewMsg.setText("Ping Test Result:      "+PostUIMsg);
+
+            }
+        });
+    }
+
+    private boolean executeCommand(){
+        System.out.println("executeCommand");
+        Runtime runtime = Runtime.getRuntime();
+        try
+        {
+            String exStr = "/system/bin/ping -c 1 "+ devIPaddress;
+            dump_trace("Exec cmd:" + exStr);
+            Process  mIpAddrProcess = runtime.exec(exStr);
+            int mExitValue = mIpAddrProcess.waitFor();
+            System.out.println(" mExitValue "+mExitValue);
+            if(mExitValue==0){
+                return true;
+            }else{
+                return false;
+            }
+        }
+        catch (InterruptedException ignore)
+        {
+            ignore.printStackTrace();
+            System.out.println(" Exception:"+ignore);
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+            System.out.println(" Exception:"+e);
+        }
+        return false;
+    }
+
+
+    private class PingWithWIFICheckedThread extends Thread {
+        Context context;
+        WifiManager wimanager;
+        PingWithWIFICheckedThread(Context contextL) {
+            context = contextL;
+            wimanager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+        }
+        private boolean enableWifi(Context context, boolean paramBoolean)
+        {
+            boolean OperateOK = false;
+            wimanager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+            if (wimanager != null) {
+                OperateOK = wimanager.setWifiEnabled(paramBoolean);
+            }
+            return OperateOK;
+        }
+        boolean isWifiEnable()
+        {
+            boolean isWifiEnable = false;
+            isWifiEnable = wimanager.isWifiEnabled();
+            return isWifiEnable;
+        }
+        private String getMacAddress(Context context)
+        {
+            wimanager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+            String macAddress = wimanager.getConnectionInfo().getMacAddress();
+            return macAddress;
+        }
+        public void run() {
+            // compute primes larger than minPrime
+            boolean wifiEnableOK;
+            boolean OperateWIFIOK = false;
+            int retryTimes=0;
+            boolean initialWIFIOnOffStatus = false;
+            wifiEnableOK = isWifiEnable();
+            initialWIFIOnOffStatus = wifiEnableOK;
+            if (wifiEnableOK)
+            {
+                //disable wifi
+                do {
+                    // bConnectOK = connecD10PrinterFunc();
+                    if (!OperateWIFIOK) {
+                        OperateWIFIOK = enableWifi(context, false);
+                    }
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    wifiEnableOK = isWifiEnable();
+                    retryTimes++;
+                } while (wifiEnableOK && (retryTimes <5));
+            }
+
+            boolean pingPASS = false;
+            retryTimes=0;
+            do {
+                pingPASS = executeCommand();
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                retryTimes++;
+            } while (!pingPASS && (retryTimes <5));
+            g_PingTestResult = pingPASS;
+            String strResult="FAIL!";
+            if (pingPASS){
+                strResult = "PASS";
+            }
+            PostUIUpdateLog_Ethernet(textViewPingPASS,strResult);
+
+            //Restore WIFI on\off status
+            OperateWIFIOK = false;
+            if (initialWIFIOnOffStatus){
+                //enable wifi
+                do {
+                    // bConnectOK = connecD10PrinterFunc();
+                    if (!OperateWIFIOK) {
+                        OperateWIFIOK = enableWifi(context, true);
+                    }
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    wifiEnableOK = isWifiEnable();
+                    retryTimes++;
+                } while (!wifiEnableOK && (retryTimes <5));
+            }
+            /*
+            Intent intent = getIntent();
+            if (pingPASS){
+                setResult(1, intent);
+            }else{
+                setResult(0, intent);
+            }
+            try {
+                Thread.sleep(1200);
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            finish();
+            */
+
+            dump_trace("Final Test Result: g_USBTestResult="+ g_USBTestResult+", g_RS232TestResult="+ g_RS232TestResult
+                    +",g_PingTestResult="+ g_PingTestResult);
+            if (g_USBTestResult && g_RS232TestResult && g_PingTestResult) {
+                dump_trace("Test Result, g_USBTestResult,g_RS232TestResult, g_PingTestResult :PASS");
+                int TestTimes=0;
+                TestTimes = get_TestTimes();
+                TestTimes++;
+                Write_TestTimes_to_InternalStorage(TestTimes);
+                UIUpdateTestTimes(TestTimes);
+                dump_trace("Test Times:=" + TestTimes);
+                //TODO: shutdown...
+                //shutdown_now();
+            }else{
+                dump_trace("Final Test Result :FAIL");
+            }
+
+        }
+    }
+
+//////////////////////End: Migrate Ethernet Test   //////////////////////////////////////////////////////////
+
+
 }

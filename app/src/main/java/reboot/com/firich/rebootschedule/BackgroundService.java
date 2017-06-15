@@ -68,7 +68,7 @@ public class BackgroundService extends IntentService {
                     dump_trace("endTime="+endTime);
                     dump_trace("End="+getCurrentDate());
                     //RebootNow();
-                    shutdown_now();
+                    //shutdown_now();
                 } catch (Exception e) {
                 }
             }
