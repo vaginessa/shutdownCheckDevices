@@ -270,6 +270,16 @@ public class MainActivity extends Activity {
         File dir = new File (g_configFolder);
         String strLConfig ="";
 
+        boolean b_ist_1st_time_run = get_flag_is_1st_time_run();
+        if (b_ist_1st_time_run)
+        {
+            dump_trace("MainActivity:LoadConfigFile:b_ist_1st_time_run.=true");
+            strLConfig = get_configFile_from_res_raw_xml();
+            write_config_xml_to_storage(strLConfig); //write a default config xml file.
+            dump_trace("res_raw_xml="+ strLConfig);
+
+            Write_flag_1st_time_run_to_Load_res_raw_xml(false); //After 1st time run, set flag to false.
+        }
         try {
             File fillFilePath = new File(dir, g_configFileName);
             if (fillFilePath.exists()){
@@ -289,6 +299,39 @@ public class MainActivity extends Activity {
         EditText editTextFECConfig=(EditText)findViewById(R.id.EditTextFECConfig);
         editTextFECConfig.setText(strLConfig);
     }
+
+    private void Write_flag_1st_time_run_to_Load_res_raw_xml(boolean Is1stTime)
+    {
+        SharedPreferences spref = getPreferences(MODE_PRIVATE);
+
+        //由 SharedPreferences 中取出 Editor 物件，透過 Editor 物件將資料存入
+        SharedPreferences.Editor editor = spref.edit();
+        //清除 SharedPreferences 檔案中所有資料
+        editor.clear();
+        //儲存 boolean 型態的資料
+        editor.putBoolean("KEY_FLAG_1ST_TIME_RUN", Is1stTime);
+        //TODO: 可以將 log 檔名存起來.... ---------------
+        //將目前對 SharedPreferences 的異動寫入檔案中
+        //如果沒有呼叫 commit()，則異動的資料不會生效
+        editor.commit();
+    }
+    private boolean get_flag_is_1st_time_run()
+    {
+        dump_trace("get_flag_is_1st_time_run:");
+        SharedPreferences spref = getPreferences(MODE_PRIVATE);
+        //回傳 KEY_STRING 是否在在 SharedPreferences 檔案中
+        boolean exists = spref.contains("KEY_FLAG_1ST_TIME_RUN");
+        if (exists){
+            dump_trace("get_flag_is_1st_time_run:KEY_FLAG_1ST_TIME_RUN:exist..");
+            //透過 KEY_BOOL key 取出 boolean 型態的資料，若資料不存在則回傳 true
+            boolean bIs1stTimeRun = spref.getBoolean("KEY_FLAG_1ST_TIME_RUN", false);
+            return bIs1stTimeRun;
+        }else{
+            dump_trace("get_flag_is_1st_time_run:KEY_FLAG_1ST_TIME_RUN:NOT exist!!so it is 1st time run..");
+            return true;
+        }
+    }
+
     String get_configFile_from_res_raw_xml()
     {
 
@@ -327,6 +370,7 @@ public class MainActivity extends Activity {
         write_config_xml_to_storage(editTextFECConfig.getText().toString());
         InitUSBStorageTable();
         InitRS232TestTable();   // Create RS232 test layout table
+        InitEthernetTestTable();
     }
     public void Start_Test_click(View view)
     {
@@ -506,6 +550,8 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
         configFile.dom4jXMLParser();
         devObject = configFile.getDevice("USBStorage");
         deviceCount = devObject.numOfUSB;
+        g_TestUSB = devObject.Test;
+        dump_trace("InitUSBStorageTable:g_TestUSB="+g_TestUSB);
         if (devObject.numOfUSB ==0) {
             deviceCount =8;
         }
@@ -583,6 +629,7 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
                 //write_Log_to_storage("USB Test total result="+ g_USBTestResult);
             }else{
                 dump_trace("Do not test USB!");
+                g_USBTestResult = true; //For final test result judgement.
             }
 
             /*
@@ -597,8 +644,9 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
             //*** For Test shutdown
 
             //Write test result into global variable.
+            /*
             if (g_USBTestResult) {
-                /*
+
                 dump_trace("Test Result:PASS");
                 TestTimes = get_TestTimes();
                 TestTimes++;
@@ -607,11 +655,12 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
                 dump_trace("Test Times:=" + TestTimes);
                 //TODO: shutdown...
                 shutdown_now();
-                */
+
             }else{
                 dump_trace("Test Result USB:FAIL");
                 // test FAIL, stop ....test ....停在錯誤的畫面不要 shutdown.
             }
+            */
 
             startRS232_Loopback_Test();
 
@@ -850,6 +899,8 @@ public void InitRS232TestTable()
     if ((strRS232DeviceList == null) || (strRS232DeviceList.length == 0)) {
         return ;
     }
+    g_TestRS232 = devObject.Test;
+    dump_trace("InitRS232TestTable:g_TestRS232=" + g_TestRS232);
     CreateRS232DeviceTable(strRS232DeviceList, g_RS232_deviceCount);
 }
 ////////////////////// End: Migrate RS232 Test  migratge //////////////////////////////////////////////////////////
@@ -874,15 +925,31 @@ public void InitRS232TestTable()
             }
             */
 
-            int i=0;
-            testPASS = RS232_Test(lstrttyUSBPath[i], ltextViewResultIDs_RS232.getTextViewResultID(i));
-            do {
-                testPASS = (testPASS && RS232_Test(lstrttyUSBPath[i], ltextViewResultIDs_RS232.getTextViewResultID(i)));
-                dump_trace("USB test result:i="+ i + "="+testPASS);
-                i++;
-            } while(i< ldeviceCount);
 
-            g_RS232TestResult = testPASS;
+            if (g_TestRS232) {
+                /*
+                int i=0;
+                testPASS = RS232_Test(lstrttyUSBPath[i], ltextViewResultIDs_RS232.getTextViewResultID(i));
+                do {
+                    testPASS = (testPASS && RS232_Test(lstrttyUSBPath[i], ltextViewResultIDs_RS232.getTextViewResultID(i)));
+                    dump_trace("USB test result:i=" + i + "=" + testPASS);
+                    i++;
+                } while (i < ldeviceCount);
+                */
+                g_RS232TestResult = true;
+                for (int i=0; i< ldeviceCount; i++) {
+                    testPASS = RS232_Test(lstrttyUSBPath[i], ltextViewResultIDs_RS232.getTextViewResultID(i));
+                    if (!testPASS){
+                        g_RS232TestResult = false; // if one of ttyUSBs fail, then RS232 test is fail.
+                    }
+                    dump_trace("RS232 test result:i=" + i + "=" + testPASS);
+
+                }
+                //g_RS232TestResult = testPASS;
+            }else{
+                dump_trace("test = false so not test RS232.");
+                g_RS232TestResult = true; //For final result judgement.
+            }
 
             Test_Ethernet();
 
@@ -990,6 +1057,8 @@ public void InitRS232TestTable()
 
         configFile.dom4jXMLParser();
         devObject = configFile.getDevice("Ethernet");
+        g_TestEthernet = devObject.Test;
+        dump_trace("InitEthernetTestTable: g_TestEthernet="+g_TestEthernet);
         if (devObject.Dev != null && !devObject.Dev.isEmpty()) {
             devIPaddress = devObject.Dev;
         }
@@ -1123,88 +1192,81 @@ public void InitRS232TestTable()
             return macAddress;
         }
         public void run() {
-            // compute primes larger than minPrime
-            boolean wifiEnableOK;
-            boolean OperateWIFIOK = false;
-            int retryTimes=0;
-            boolean initialWIFIOnOffStatus = false;
-            wifiEnableOK = isWifiEnable();
-            initialWIFIOnOffStatus = wifiEnableOK;
-            if (wifiEnableOK)
-            {
-                //disable wifi
-                do {
-                    // bConnectOK = connecD10PrinterFunc();
-                    if (!OperateWIFIOK) {
-                        OperateWIFIOK = enableWifi(context, false);
-                    }
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                    wifiEnableOK = isWifiEnable();
-                    retryTimes++;
-                } while (wifiEnableOK && (retryTimes <5));
-            }
 
-            boolean pingPASS = false;
-            retryTimes=0;
-            do {
-                pingPASS = executeCommand();
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+            if (g_TestEthernet) {
+                // compute primes larger than minPrime
+                boolean wifiEnableOK;
+                boolean OperateWIFIOK = false;
+                int retryTimes = 0;
+                boolean initialWIFIOnOffStatus = false;
+                wifiEnableOK = isWifiEnable();
+                initialWIFIOnOffStatus = wifiEnableOK;
+                if (wifiEnableOK) {
+                    //disable wifi
+                    do {
+                        // bConnectOK = connecD10PrinterFunc();
+                        if (!OperateWIFIOK) {
+                            OperateWIFIOK = enableWifi(context, false);
+                        }
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+                        wifiEnableOK = isWifiEnable();
+                        retryTimes++;
+                    } while (wifiEnableOK && (retryTimes < 5));
                 }
-                retryTimes++;
-            } while (!pingPASS && (retryTimes <5));
-            g_PingTestResult = pingPASS;
-            String strResult="FAIL!";
-            if (pingPASS){
-                strResult = "PASS";
-            }
-            PostUIUpdateLog_Ethernet(textViewPingPASS,strResult);
 
-            //Restore WIFI on\off status
-            OperateWIFIOK = false;
-            if (initialWIFIOnOffStatus){
-                //enable wifi
+                boolean pingPASS = false;
+                retryTimes = 0;
                 do {
-                    // bConnectOK = connecD10PrinterFunc();
-                    if (!OperateWIFIOK) {
-                        OperateWIFIOK = enableWifi(context, true);
-                    }
+                    pingPASS = executeCommand();
                     try {
                         Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         // TODO Auto-generated catch block
                         e.printStackTrace();
                     }
-                    wifiEnableOK = isWifiEnable();
                     retryTimes++;
-                } while (!wifiEnableOK && (retryTimes <5));
-            }
-            /*
-            Intent intent = getIntent();
-            if (pingPASS){
-                setResult(1, intent);
-            }else{
-                setResult(0, intent);
-            }
-            try {
-                Thread.sleep(1200);
-            } catch (InterruptedException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-            finish();
-            */
+                } while (!pingPASS && (retryTimes < 5));
+                g_PingTestResult = pingPASS;
+                String strResult = "FAIL!";
+                if (pingPASS) {
+                    strResult = "PASS";
+                }
+                PostUIUpdateLog_Ethernet(textViewPingPASS, strResult);
 
+                //Restore WIFI on\off status
+                OperateWIFIOK = false;
+                if (initialWIFIOnOffStatus) {
+                    //enable wifi
+                    do {
+                        // bConnectOK = connecD10PrinterFunc();
+                        if (!OperateWIFIOK) {
+                            OperateWIFIOK = enableWifi(context, true);
+                        }
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+                        wifiEnableOK = isWifiEnable();
+                        retryTimes++;
+                    } while (!wifiEnableOK && (retryTimes < 5));
+                }
+
+            }else{
+                dump_trace("Do not test Ethernet.");
+                g_PingTestResult = true;
+            }
             dump_trace("Final Test Result: g_USBTestResult="+ g_USBTestResult+", g_RS232TestResult="+ g_RS232TestResult
                     +",g_PingTestResult="+ g_PingTestResult);
+
+            //g_USBTestResult = g_RS232TestResult = g_PingTestResult = true; //for test only..
+
             if (g_USBTestResult && g_RS232TestResult && g_PingTestResult) {
                 dump_trace("Test Result, g_USBTestResult,g_RS232TestResult, g_PingTestResult :PASS");
                 int TestTimes=0;
@@ -1214,7 +1276,7 @@ public void InitRS232TestTable()
                 UIUpdateTestTimes(TestTimes);
                 dump_trace("Test Times:=" + TestTimes);
                 //TODO: shutdown...
-                //shutdown_now();
+                shutdown_now();
             }else{
                 dump_trace("Final Test Result :FAIL");
             }
