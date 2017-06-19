@@ -209,6 +209,14 @@ public class MainActivity extends Activity {
         InitRS232TestTable();   // Create RS232 test layout table
         InitEthernetTestTable();
 
+        Intent intent = getIntent();
+        g_bFromBootCompleted = intent.getBooleanExtra("FromBootCompleted", false);
+        dump_trace("onStart:bFromBootCompleted"+ g_bFromBootCompleted);
+        if (g_bFromBootCompleted)
+        {
+            //start 3min delay to test
+            startUSBStorage_Test();
+        }
 
 
         /*
@@ -224,16 +232,9 @@ public class MainActivity extends Activity {
         super.onStart();
 
         dump_trace("onStart:start");
-        setTitle(" SN:" + Build.SERIAL);
+        //setTitle(" SN:" + Build.SERIAL);
 
-        Intent intent = getIntent();
-        g_bFromBootCompleted = intent.getBooleanExtra("FromBootCompleted", false);
-        dump_trace("onStart:bFromBootCompleted"+ g_bFromBootCompleted);
-        if (g_bFromBootCompleted)
-        {
-            //start 3min delay to test
-            startUSBStorage_Test();
-        }
+
 
     }
 
@@ -310,6 +311,7 @@ public class MainActivity extends Activity {
         editor.clear();
         //儲存 boolean 型態的資料
         editor.putBoolean("KEY_FLAG_1ST_TIME_RUN", Is1stTime);
+        editor.putInt("KEY_TEST_TIMES", 0);
         //TODO: 可以將 log 檔名存起來.... ---------------
         //將目前對 SharedPreferences 的異動寫入檔案中
         //如果沒有呼叫 commit()，則異動的資料不會生效
@@ -629,6 +631,9 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
                 //write_Log_to_storage("USB Test total result="+ g_USBTestResult);
             }else{
                 dump_trace("Do not test USB!");
+                for (int i = 1; i <= ldeviceCount; i++) {
+                    PostUIUpdateLog("NA", false, ltextViewResultIDs.getTextViewResultID(i - 1));
+                }
                 g_USBTestResult = true; //For final test result judgement.
             }
 
@@ -695,6 +700,7 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
         editor.clear();
         //儲存 boolean 型態的資料
         editor.putInt("KEY_TEST_TIMES", nTestTimes);
+        editor.putBoolean("KEY_FLAG_1ST_TIME_RUN", false);
         //TODO: 可以將 log 檔名存起來.... ---------------
         //將目前對 SharedPreferences 的異動寫入檔案中
         //如果沒有呼叫 commit()，則異動的資料不會生效
@@ -789,10 +795,14 @@ http://www.captechconsulting.com/blogs/runtime-permissions-best-practices-and-ho
                 //Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
                 final TextView textViewResultDeviceID = (TextView) findViewById(testDeviceTextViewID);
                 dump_trace("PostUIUpdateLog:testPASS="+testPASS);
-                if (testPASS)
-                    textViewResultDeviceID.setText("PASS");
-                else
-                    textViewResultDeviceID.setText("FAIL");
+                if (msg.equals("NA")){
+                    textViewResultDeviceID.setText("Not Test!");
+                }else {
+                    if (testPASS)
+                        textViewResultDeviceID.setText(msg + "PASS");
+                    else
+                        textViewResultDeviceID.setText(msg + "FAIL");
+                }
 
             }
         });
@@ -948,6 +958,10 @@ public void InitRS232TestTable()
                 //g_RS232TestResult = testPASS;
             }else{
                 dump_trace("test = false so not test RS232.");
+                for (int i=0; i< ldeviceCount; i++) {
+                    PostUIUpdateLog_RS232("NA", 0, ltextViewResultIDs_RS232.getTextViewResultID(i));
+                }
+
                 g_RS232TestResult = true; //For final result judgement.
             }
 
@@ -980,10 +994,14 @@ public void InitRS232TestTable()
                 //Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
                 final TextView textViewResultDeviceID = (TextView) findViewById(testDeviceTextViewID);
                 dump_trace("PostUIUpdateLog_RS232:intDataReceivedLength="+intDataReceivedLength);
-                if (intDataReceivedLength >0)
-                    textViewResultDeviceID.setText("PASS");
-                else
-                    textViewResultDeviceID.setText("FAIL");
+                if (msg.equals("NA")){
+                    textViewResultDeviceID.setText("Not Test!");
+                }else {
+                    if (intDataReceivedLength > 0)
+                        textViewResultDeviceID.setText("PASS");
+                    else
+                        textViewResultDeviceID.setText("FAIL");
+                }
 
             }
         });
@@ -1260,6 +1278,7 @@ public void InitRS232TestTable()
 
             }else{
                 dump_trace("Do not test Ethernet.");
+                PostUIUpdateLog_Ethernet(textViewPingPASS, "Not Test!");
                 g_PingTestResult = true;
             }
             dump_trace("Final Test Result: g_USBTestResult="+ g_USBTestResult+", g_RS232TestResult="+ g_RS232TestResult
